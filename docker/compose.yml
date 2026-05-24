@@ -1,0 +1,70 @@
+services:
+
+  # ---------------------------------------------------------------
+  # build-static: computes corrected SVF + static feature grid
+  # CPU-only — no GPU needed.  Writes data/static_features.zarr.
+  # Runtime: ~30-90 min for 63,001 grid points.
+  #
+  # Run:  docker compose --profile static up --build
+  # ---------------------------------------------------------------
+  build-static:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: weather_v2:base
+    container_name: weather_build_static
+    volumes:
+      - ${DATA_DIR}:/app/data
+      - ${EXPERIMENTS_DIR:-../experiments}:/app/experiments
+    environment:
+      - PYTHONUNBUFFERED=1
+    deploy:
+      resources:
+        limits:
+          memory: 32G
+          cpus: '8'
+    command: >
+      python scripts/data/build_static_features.py
+        --buildings /app/data/barcelona_buildings.geojson
+        --source    /app/data/weather_static_features.zarr
+        --urbclim   /app/data/urbclim_2008-2017.zarr
+        --out       /app/data/static_features.zarr
+        --workers   8
+    restart: "no"
+    profiles: ["static"]
+
+  # ---------------------------------------------------------------
+  # train: single training run; architecture/seed/seq_len via env
+  #
+  # Run:  ARCH=mamba SEED=42 SEQ_LEN=6 \
+  #       docker compose --profile train up --build
+  # ---------------------------------------------------------------
+  train:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: weather_v2:base
+    container_name: weather_train_${ARCH:-unet}_s${SEED:-42}_t${SEQ_LEN:-6}
+    volumes:
+      - ${DATA_DIR}:/app/data
+      - ${EXPERIMENTS_DIR:-../experiments}:/app/experiments
+    environment:
+      - PYTHONUNBUFFERED=1
+      - CUDA_VISIBLE_DEVICES=0
+      - ARCH=${ARCH:-unet}
+      - SEED=${SEED:-42}
+      - SEQ_LEN=${SEQ_LEN:-6}
+    deploy:
+      resources:
+        limits:
+          memory: 48G
+          cpus: '12'
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    shm_size: '16gb'
+    command: python scripts/training/train.py
+    restart: "no"
+    profiles: ["train"]
