@@ -1,0 +1,23 @@
+# Data and experiments — never committed
+/data/
+/experiments/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+*.egg
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# LaTeX
+*.aux *.log *.out *.synctex.gz *.bbl *.blg *.spl
