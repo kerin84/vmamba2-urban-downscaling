@@ -27,7 +27,7 @@ services:
       python scripts/data/build_static_features.py
         --buildings /app/data/barcelona_buildings.geojson
         --source    /app/data/weather_static_features.zarr
-        --urbclim   /app/data/urbclim_2008-2017.zarr
+        --grid      /app/data/urbclim_grid_coords.txt
         --out       /app/data/static_features.zarr
         --workers   8
     restart: "no"

@@ -75,7 +75,10 @@ def _parse_args():
     p.add_argument("--source",   default="data/weather_static_features.zarr",
                    help="Source static zarr (land-use percentiles, elevation, NDVI)")
     p.add_argument("--urbclim",  default="data/urbclim_2008-2017.zarr",
-                   help="UrbClim zarr — used only to read the 251×251 grid coordinates")
+                   help="UrbClim zarr OR a plain-text grid coords file (one 'lat_lon' per line). "
+                        "Use the .txt file to avoid uploading the full 34 GB zarr for this step.")
+    p.add_argument("--grid",     default=None,
+                   help="Shortcut: path to urbclim_grid_coords.txt (overrides --urbclim)")
     p.add_argument("--out",      default="data/static_features.zarr",
                    help="Output zarr path")
     p.add_argument("--workers",  type=int, default=4,
@@ -305,10 +308,15 @@ def main():
         print(f"  {k}: {p}")
     print()
 
-    # 1. Load HR grid coordinates from UrbClim zarr
-    print("Loading UrbClim grid coordinates...")
-    ds_urb = xr.open_zarr(str(paths["urbclim"]))
-    station_ids = ds_urb.weatherStation.values   # strings "lat_lon"
+    # 1. Load HR grid coordinates — from .txt file (fast) or full zarr
+    grid_src = args.grid or str(paths["urbclim"])
+    print(f"Loading UrbClim grid coordinates from: {grid_src}")
+    if grid_src.endswith(".txt"):
+        with open(grid_src) as fh:
+            station_ids = np.array(fh.read().splitlines())
+    else:
+        ds_urb = xr.open_zarr(grid_src)
+        station_ids = ds_urb.weatherStation.values   # strings "lat_lon"
     lats = np.array([float(s.split("_")[0]) for s in station_ids])
     lons = np.array([float(s.split("_")[1]) for s in station_ids])
     df_grid = pd.DataFrame({"station_id": station_ids, "lat": lats, "lon": lons})

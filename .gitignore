@@ -1,5 +1,6 @@
 # Data and experiments — never committed
 /data/
+!/data/urbclim_grid_coords.txt
 /experiments/
 
 # Python
