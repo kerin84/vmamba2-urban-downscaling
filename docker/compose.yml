@@ -196,7 +196,7 @@ services:
       - ../src:/app/src:ro
     environment:
       - PYTHONUNBUFFERED=1
-      - CUDA_VISIBLE_DEVICES=${GPU:-1}
+      - NVIDIA_VISIBLE_DEVICES=${GPU:-1}
       - ARCH=${ARCH:-unet}
       - SEED=${SEED:-42}
       - SEQ_LEN=${SEQ_LEN:-6}
