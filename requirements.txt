@@ -1,6 +1,6 @@
 # Core ML — PyTorch stack
+# mamba-ssm installed separately in Dockerfile with --no-build-isolation (needs torch already present)
 torch>=2.2.0
-mamba-ssm>=1.2.0
 
 # Data
 numpy>=1.26
@@ -8,10 +8,11 @@ xarray>=2024.1
 zarr>=2.16
 scipy>=1.12
 
-# Geospatial (static feature computation)
+# Geospatial (static feature computation + UrbClim reprojection)
 geopandas>=0.14
 shapely>=2.0
 pyproj>=3.6
+rasterio>=1.3        # Path A: bilinear reprojection (regular EPSG:3035 grids)
 
 # Metrics
 scikit-image>=0.22   # SSIM

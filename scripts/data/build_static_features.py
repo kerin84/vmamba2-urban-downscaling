@@ -356,6 +356,22 @@ def main():
     ndvi  = src_aligned["ndvi_mean"].values.astype(np.float32)
     impervious = np.clip(0.65 * dens + 0.35 * (1.0 - ndvi), 0.0, 1.0).astype(np.float32)
 
+    # Aggregate raw building-area percentiles from source zarr into index features.
+    # Source zarr has building_area_<type>_percentile columns (scale ~0–100).
+    def _pct(col):
+        return src_aligned[col].values.astype(np.float32)
+
+    height_index      = _pct("n_floors_above_ground_percentile")
+    residential_index = _pct("building_area_residential_percentile")
+    industrial_index  = (_pct("building_area_industrial_percentile")
+                         + _pct("building_area_warehouse_parking_percentile")) / 2.0
+    services_index    = (_pct("building_area_commercial_percentile")
+                         + _pct("building_area_offices_percentile")
+                         + _pct("building_area_healthcare_and_charity_percentile")) / 3.0
+    leisure_index     = (_pct("building_area_leisure_and_hospitality_percentile")
+                         + _pct("building_area_entertainment_venues_percentile")
+                         + _pct("building_area_sports_facilities_percentile")) / 3.0
+
     ds_out = xr.Dataset(
         {
             # From building geometry (morphology)
@@ -369,12 +385,12 @@ def main():
             "impervious_fraction": _col(impervious),
             # From source zarr (land-use percentiles, elevation, NDVI)
             "elevation":          _col(src_aligned["elevation"].values),
-            "height_index":       _col(src_aligned["height_index"].values),
+            "height_index":       _col(height_index),
             "ndvi_mean":          _col(ndvi),
-            "residential_index":  _col(src_aligned["residential_index"].values),
-            "industrial_index":   _col(src_aligned["industrial_index"].values),
-            "services_index":     _col(src_aligned["services_index"].values),
-            "leisure_index":      _col(src_aligned["leisure_index"].values),
+            "residential_index":  _col(residential_index),
+            "industrial_index":   _col(industrial_index),
+            "services_index":     _col(services_index),
+            "leisure_index":      _col(leisure_index),
         },
         coords={"weatherStation": station_ids},
     )
