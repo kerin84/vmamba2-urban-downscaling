@@ -34,6 +34,150 @@ services:
     profiles: ["static"]
 
   # ---------------------------------------------------------------
+  # compare-preprocessing: quantify v1 IDW distortion vs v2 exact reshape
+  # CPU-only. Runtime: ~5-10 min (builds IDW weights + runs 200 timesteps).
+  #
+  # Run:  DATA_DIR=/home/thor/data3 \
+  #       docker compose --profile compare up --build
+  # ---------------------------------------------------------------
+  compare-preprocessing:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: weather_v2:base
+    container_name: weather_compare_preprocessing
+    volumes:
+      - ${DATA_DIR}:/app/data
+    environment:
+      - PYTHONUNBUFFERED=1
+      - URBCLIM_RAW=/app/data/raw_urbclim.zarr
+      - URBCLIM_OUT=/app/data/urbclim_2008-2017.zarr
+    deploy:
+      resources:
+        limits:
+          memory: 16G
+          cpus: '4'
+    command: python scripts/data/compare_v1_v2_preprocessing.py
+    restart: "no"
+    profiles: ["compare"]
+
+  # ---------------------------------------------------------------
+  # verify-urbclim: spot-check raw vs processed zarr, spatial/temporal sanity
+  # CPU-only. Runtime: ~2-5 min.
+  #
+  # Run:  DATA_DIR=/home/thor/data3 \
+  #       docker compose --profile verify up --build
+  # ---------------------------------------------------------------
+  verify-urbclim:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: weather_v2:base
+    container_name: weather_verify_urbclim
+    volumes:
+      - ${DATA_DIR}:/app/data
+    environment:
+      - PYTHONUNBUFFERED=1
+      - URBCLIM_RAW=/app/data/raw_urbclim.zarr
+      - URBCLIM_OUT=/app/data/urbclim_2008-2017.zarr
+    deploy:
+      resources:
+        limits:
+          memory: 16G
+          cpus: '4'
+    command: python scripts/data/verify_urbclim.py
+    restart: "no"
+    profiles: ["verify"]
+
+  # ---------------------------------------------------------------
+  # inspect-urbclim: inspect raw station zarr, emit inspection JSON
+  # CPU-only.  Run once before preprocess-urbclim.
+  # Runtime: <5 min.
+  #
+  # Run:  DATA_DIR=/home/thor/data3 \
+  #       docker compose --profile inspect up --build
+  # ---------------------------------------------------------------
+  inspect-urbclim:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: weather_v2:base
+    container_name: weather_inspect_urbclim
+    volumes:
+      - ${DATA_DIR}:/app/data
+    environment:
+      - PYTHONUNBUFFERED=1
+      - URBCLIM_RAW=/app/data/raw_urbclim.zarr
+      - URBCLIM_INSPECT_JSON=/app/data/urbclim_raw_inspection.json
+    deploy:
+      resources:
+        limits:
+          memory: 16G
+          cpus: '4'
+    command: python scripts/data/inspect_urbclim_raw.py
+    restart: "no"
+    profiles: ["inspect"]
+
+  # ---------------------------------------------------------------
+  # preprocess-urbclim: station zarr → gridded (time, y, x) zarr
+  # CPU-only.  Resumes from checkpoint if interrupted.
+  # Runtime: ~20-60 min depending on method.
+  #
+  # Run:  DATA_DIR=/home/thor/data3 \
+  #       docker compose --profile preprocess up --build
+  # ---------------------------------------------------------------
+  preprocess-urbclim:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: weather_v2:base
+    container_name: weather_preprocess_urbclim
+    volumes:
+      - ${DATA_DIR}:/app/data
+    environment:
+      - PYTHONUNBUFFERED=1
+      - URBCLIM_RAW=/app/data/raw_urbclim.zarr
+      - URBCLIM_OUT=/app/data/urbclim_2008-2017.zarr
+      - URBCLIM_INSPECT_JSON=/app/data/urbclim_raw_inspection.json
+    deploy:
+      resources:
+        limits:
+          memory: 32G
+          cpus: '8'
+    command: python scripts/data/preprocess_urbclim.py
+    restart: "no"
+    profiles: ["preprocess"]
+
+  # ---------------------------------------------------------------
+  # preprocess-era5: crop ERA5-Land zarr to Barcelona domain
+  # CPU-only. Runtime: ~2-5 min.
+  #
+  # Run:  DATA_DIR=/home/thor/data3 \
+  #       ERA5_RAW=/home/thor/data3/weather_era5land_200801-201712.zarr \
+  #       docker compose --profile era5 up --build
+  # ---------------------------------------------------------------
+  preprocess-era5:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: weather_v2:base
+    container_name: weather_preprocess_era5
+    volumes:
+      - ${DATA_DIR}:/app/data
+      - ${ERA5_RAW_DIR:-/home/thor/data3}:/app/era5raw:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+      - ERA5_RAW=${ERA5_RAW:-/app/era5raw/weather_era5land_200801-201712.zarr}
+    deploy:
+      resources:
+        limits:
+          memory: 8G
+          cpus: '4'
+    command: python scripts/data/preprocess_era5.py
+    restart: "no"
+    profiles: ["era5"]
+
+  # ---------------------------------------------------------------
   # train: single training run; architecture/seed/seq_len via env
   #
   # Run:  ARCH=mamba SEED=42 SEQ_LEN=6 \
