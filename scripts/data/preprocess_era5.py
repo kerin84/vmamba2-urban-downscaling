@@ -98,7 +98,8 @@ def main():
     # Clear v2 encoding inherited from source (codec format incompatible with zarr v3)
     for v in list(ds_crop.data_vars) + list(ds_crop.coords):
         ds_crop[v].encoding = {}
-    ds_crop.to_zarr(str(OUT_PATH), mode="w")
+    # zarr_format=2: write zarr v2 format for server compatibility (server uses zarr 2.x)
+    ds_crop.to_zarr(str(OUT_PATH), mode="w", zarr_format=2)
 
     # ── Verify ────────────────────────────────────────────────────
     ds_out = xr.open_zarr(str(OUT_PATH), consolidated=False)
