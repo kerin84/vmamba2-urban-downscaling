@@ -192,6 +192,8 @@ services:
     volumes:
       - ${DATA_DIR}:/app/data
       - ${EXPERIMENTS_DIR:-../experiments}:/app/experiments
+      - ../scripts:/app/scripts:ro
+      - ../src:/app/src:ro
     environment:
       - PYTHONUNBUFFERED=1
       - CUDA_VISIBLE_DEVICES=${GPU:-1}
