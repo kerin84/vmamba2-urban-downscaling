@@ -44,7 +44,7 @@ VMamba2 replaces the 1D Mamba bottleneck in a U-Net architecture with a 2D cross
 │       └── baseline_results.csv # ERA5-Land baselines
 ├── requirements.txt           # Python dependencies
 ├── docker/
-│   ├── Dockerfile             # PyTorch 2.7+ cu128 container
+│   ├── Dockerfile             # PyTorch 2.2.0 + CUDA 12.1 container
 │   └── compose.yml            # Docker Compose for training + evaluation
 ├── data/                      # Placeholder for datasets (see below)
 │   └── urbclim_grid_coords.txt
@@ -72,9 +72,9 @@ Place preprocessed `.zarr` files in `data/` following the expected layout:
 
 ```
 data/
-├── era5land_2008-2017.zarr     # 22 stations, 9 variables
-├── urbclim_2008-2017.zarr      # 63001 stations (251×251 grid)
-├── static_features.zarr        # 14 GIS-derived morphology channels
+├── era5land_2008-2017.zarr     # 9 ERA5-Land variables, Barcelona crop
+├── urbclim_2008-2017.zarr      # 251×251 grid (63001 pixels)
+├── static_features.zarr        # 11 GIS-derived morphology channels
 ├── normalization_stats.npz     # Precomputed mean/std for normalization
 └── urbclim_grid_coords.txt     # Lat/lon for each of the 63001 grid pixels
 ```
@@ -86,7 +86,7 @@ python scripts/training/train.py
 ```
 
 Configuration via `config/config.py`:
-- `ARCH`: `"vmamba"`, `"mamba"`, `"convlstm"`, `"unet"`
+- `ARCH`: `"vmamba2"` (proposed), `"mamba"` (1D Mamba ablation), `"convlstm"`, `"unet"`
 - `SEQ_LEN`: 6 or 12
 - `SEED`: 42–46 (manuscript uses n=5 seeds)
 - `BATCH_SIZE`, `EPOCHS`, `LR`, `LOSS_TYPE`, `LOSS_ALPHA`
