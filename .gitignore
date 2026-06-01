@@ -1,13 +1,14 @@
-# Data directories (large files)
+# Large data
 data/era5land_2008-2017.zarr
 data/urbclim_2008-2017.zarr
+data/*.zarr
+data/*.geojson
 data/normalization_stats.npz
 
 # Trained models
 experiments/**/best.pt
 experiments/**/best_ckpt.pt
 experiments/**/*.pth
-experiments/**/*.pt
 
 # Large prediction arrays
 experiments/evaluation/predictions/
