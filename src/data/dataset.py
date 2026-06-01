@@ -21,10 +21,10 @@ Static features:
   Mapped to the EPSG:3035 (y, x) grid at init time via pyproj projection.
 
 Normalization:
-  Stats are pre-computed by scripts/data/compute_normalization_stats.py and
-  stored in data/normalization_stats.npz. This file must exist before training.
-  Layout: era5_mean (DYN_CHANNELS,), era5_std (DYN_CHANNELS,),
-          urbclim_mean scalar, urbclim_std scalar.
+  ERA5 inputs    : z-score per variable (era5_mean, era5_std from train split).
+  UrbClim target : z-score (urbclim_mean, urbclim_std from train split).
+  Stats pre-computed by scripts/data/compute_normalization_stats.py.
+  urbclim_min/max also stored in the stats file for evaluation / denormalization.
 """
 
 from __future__ import annotations

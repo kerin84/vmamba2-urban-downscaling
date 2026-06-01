@@ -1,24 +1,37 @@
-# Data and experiments — never committed
-/data/
-!/data/urbclim_grid_coords.txt
-/experiments/
+# Data directories (large files)
+data/era5land_2008-2017.zarr
+data/urbclim_2008-2017.zarr
+data/normalization_stats.npz
+
+# Trained models
+experiments/**/best.pt
+experiments/**/best_ckpt.pt
+experiments/**/*.pth
+experiments/**/*.pt
+
+# Large prediction arrays
+experiments/evaluation/predictions/
+experiments/evaluation/rollout/
+experiments/evaluation/extended/
 
 # Python
 __pycache__/
 *.py[cod]
 *.egg-info/
 .venv/
-*.egg
+venv/
 
-# Jupyter
-.ipynb_checkpoints/
+# Docker / secrets
+.env
+docker/.env
 
-# OS
-.DS_Store
+# WandB
+wandb/
 
 # IDE
 .vscode/
 .idea/
 
-# LaTeX
-*.aux *.log *.out *.synctex.gz *.bbl *.blg *.spl
+# OS
+.DS_Store
+Thumbs.db

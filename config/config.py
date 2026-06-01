@@ -96,8 +96,12 @@ TEMPORAL_MONTH_WEIGHTS = {
     10: 1, 11: 1, 12: 1,
 }
 
-# Loss: hybrid MSE + SSIM
-LOSS_ALPHA = 0.8   # weight on SSIM term
+# Loss: 'hybrid' = (1-alpha)*MSE + alpha*(1-SSIM), matches v1 tf_hybrid_loss
+#       'mse'    = pure MSE (standard in climate DL literature)
+# max_val=5.0 sets SSIM C1/C2 — matches v1 protocol (Protocolos 06_Metodos).
+LOSS_TYPE  = "hybrid"
+LOSS_ALPHA = 0.8    # SSIM weight; matches v1
+LOSS_MAX_VAL = 5.0  # SSIM dynamic range; matches v1 tf_hybrid_loss(max_val=5.0)
 
 # ---------------------------------------------------------------------------
 # Model dimensions

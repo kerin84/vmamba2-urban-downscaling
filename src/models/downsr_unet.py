@@ -154,10 +154,130 @@ class _MambaBottleneck(nn.Module):
         return td(self.proj, out)
 
 
+class _VMamba2DBottleneck(nn.Module):
+    """
+    VMamba-style 2D scanning bottleneck — v1: spatial only.
+    Row + column scanning per timestep, NO temporal integration.
+    Baseline for ablation vs v2.
+    """
+    def __init__(
+        self,
+        in_ch:  int = 128,
+        out_ch: int = 256,
+        d_state: int = MAMBA_D_STATE,
+        d_conv:  int = MAMBA_D_CONV,
+        expand:  int = MAMBA_EXPAND,
+    ):
+        super().__init__()
+        self.mamba_row1 = _make_mamba(in_ch, d_state, d_conv, expand)
+        self.mamba_row2 = _make_mamba(in_ch, d_state, d_conv, expand)
+        self.mamba_col1 = _make_mamba(in_ch, d_state, d_conv, expand)
+        self.mamba_col2 = _make_mamba(in_ch, d_state, d_conv, expand)
+        self.norm       = nn.LayerNorm(in_ch)
+        self.proj       = nn.Conv2d(in_ch, out_ch, 1)
+
+    def _scan_row(self, x: torch.Tensor) -> torch.Tensor:
+        B, C, H, W = x.shape
+        x_r = x.permute(0, 2, 3, 1).reshape(B * H, W, C)
+        x_r = self.mamba_row1(x_r)
+        x_r = self.mamba_row2(x_r)
+        return x_r.reshape(B, H, W, C).permute(0, 3, 1, 2).contiguous()
+
+    def _scan_col(self, x: torch.Tensor) -> torch.Tensor:
+        B, C, H, W = x.shape
+        x_c = x.permute(0, 2, 3, 1).permute(0, 2, 1, 3).reshape(B * W, H, C)
+        x_c = self.mamba_col1(x_c)
+        x_c = self.mamba_col2(x_c)
+        return x_c.reshape(B, W, H, C).permute(0, 2, 1, 3).permute(0, 3, 1, 2).contiguous()
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        B, T, C, H, W = x.shape
+        outs = []
+        for t in range(T):
+            frame = x[:, t]
+            row_out = self._scan_row(frame)
+            col_out = self._scan_col(frame)
+            outs.append((row_out + col_out) / 2.0)
+        out = torch.stack(outs, dim=1)
+        out = self.norm(out.permute(0, 1, 3, 4, 2)).permute(0, 1, 4, 2, 3).contiguous()
+        return td(self.proj, out)
+
+
+class _VMambaTemporalBottleneck(nn.Module):
+    """
+    VMamba 2D scanning bottleneck — v2: spatial + temporal.
+
+    Pipeline por timestep:
+      1. Row scan espacial (por frame): (B*H, W, C) → Mamba
+      2. Col scan espacial (por frame): (B*W, H, C) → Mamba
+      3. Merge espacial → (B, T, C, H, W)
+      4. Temporal scan (por pixel): (B*H*W, T, C) → Mamba
+
+    Orden: espacial primero (estructura del frame), temporal después (evolución).
+    """
+    def __init__(
+        self,
+        in_ch:  int = 128,
+        out_ch: int = 256,
+        d_state: int = MAMBA_D_STATE,
+        d_conv:  int = MAMBA_D_CONV,
+        expand:  int = MAMBA_EXPAND,
+    ):
+        super().__init__()
+        # Espacial: row + col (2 capas cada uno, como v1)
+        self.mamba_row1 = _make_mamba(in_ch, d_state, d_conv, expand)
+        self.mamba_row2 = _make_mamba(in_ch, d_state, d_conv, expand)
+        self.mamba_col1 = _make_mamba(in_ch, d_state, d_conv, expand)
+        self.mamba_col2 = _make_mamba(in_ch, d_state, d_conv, expand)
+        # Temporal: 1 capa Mamba sobre secuencia T
+        self.mamba_time = _make_mamba(in_ch, d_state, d_conv, expand)
+        self.norm       = nn.LayerNorm(in_ch)
+        self.proj       = nn.Conv2d(in_ch, out_ch, 1)
+
+    def _scan_row(self, x: torch.Tensor) -> torch.Tensor:
+        B, C, H, W = x.shape
+        x_r = x.permute(0, 2, 3, 1).reshape(B * H, W, C)
+        x_r = self.mamba_row1(x_r)
+        x_r = self.mamba_row2(x_r)
+        return x_r.reshape(B, H, W, C).permute(0, 3, 1, 2).contiguous()
+
+    def _scan_col(self, x: torch.Tensor) -> torch.Tensor:
+        B, C, H, W = x.shape
+        x_c = x.permute(0, 2, 3, 1).permute(0, 2, 1, 3).reshape(B * W, H, C)
+        x_c = self.mamba_col1(x_c)
+        x_c = self.mamba_col2(x_c)
+        return x_c.reshape(B, W, H, C).permute(0, 2, 1, 3).permute(0, 3, 1, 2).contiguous()
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        B, T, C, H, W = x.shape
+
+        # --- Fase 1: Espacial (row + col scan por frame) ---
+        outs = []
+        for t in range(T):
+            frame = x[:, t]
+            row_out = self._scan_row(frame)
+            col_out = self._scan_col(frame)
+            merged = (row_out + col_out) / 2.0
+            outs.append(merged)
+        out = torch.stack(outs, dim=1)                     # (B, T, C, H, W)
+
+        # --- Fase 2: Temporal scan por posición espacial ---
+        # (B, T, C, H, W) → (B*H*W, T, C) → Mamba → (B*H*W, T, C) → reshape
+        out_t = out.permute(0, 3, 4, 1, 2).reshape(B * H * W, T, C)
+        out_t = self.mamba_time(out_t)
+        out = out_t.reshape(B, H, W, T, C).permute(0, 3, 4, 1, 2).contiguous()  # (B, T, C, H, W)
+
+        # LayerNorm + project
+        out = self.norm(out.permute(0, 1, 3, 4, 2)).permute(0, 1, 4, 2, 3).contiguous()
+        return td(self.proj, out)
+
+
 _BOTTLENECKS = {
     "unet":     _UNetBottleneck,
     "convlstm": _ConvLSTMBottleneck,
     "mamba":    _MambaBottleneck,
+    "vmamba":   _VMamba2DBottleneck,
+    "vmamba2":  _VMambaTemporalBottleneck,
 }
 
 

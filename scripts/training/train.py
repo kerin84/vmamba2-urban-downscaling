@@ -35,11 +35,11 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from config.config import (
     EXPERIMENTS_DIR, BATCH_SIZE, EPOCHS, LR,
-    MAX_STEPS_PER_EPOCH, EARLY_STOPPING_PATIENCE, LOSS_ALPHA, SEQ_LEN,
+    MAX_STEPS_PER_EPOCH, EARLY_STOPPING_PATIENCE, LOSS_ALPHA, LOSS_TYPE, LOSS_MAX_VAL, SEQ_LEN,
 )
 from src.data.dataset import UrbanDownscalingDataset
 from src.models.downsr_unet import DownsrUNet
-from src.losses import HybridLoss
+from src.losses import HybridLoss, _ssim
 
 
 # ---------------------------------------------------------------------------
@@ -155,7 +155,7 @@ def val_epoch(
     device: torch.device,
 ) -> dict:
     model.eval()
-    total_loss = total_mae = 0.0
+    total_loss = total_mae = total_ssim = 0.0
     steps = 0
 
     for era5_seq, static, target in loader:
@@ -171,12 +171,16 @@ def val_epoch(
                 target.unsqueeze(1),
             )
 
-        mae = (pred[:, -1] - target).abs().mean().item()
+        p = pred[:, -1].unsqueeze(1).float()
+        t = target.unsqueeze(1).float()
+        mae  = (p.squeeze(1) - t.squeeze(1)).abs().mean().item()
+        ssim = _ssim(p, t, max_val=LOSS_MAX_VAL).item()
         total_loss += loss.item()
         total_mae  += mae
+        total_ssim += ssim
         steps += 1
 
-    return {"loss": total_loss / steps, "mae": total_mae / steps}
+    return {"loss": total_loss / steps, "mae": total_mae / steps, "ssim": total_ssim / steps}
 
 
 # ---------------------------------------------------------------------------
@@ -210,7 +214,10 @@ def main():
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer, mode="min", factor=0.5, patience=5, min_lr=1e-7
     )
-    criterion = HybridLoss(alpha=LOSS_ALPHA)
+    if LOSS_TYPE == "mse":
+        criterion = nn.MSELoss()
+    else:
+        criterion = HybridLoss(alpha=LOSS_ALPHA, max_val=LOSS_MAX_VAL)
     scaler    = torch.cuda.amp.GradScaler(enabled=(device.type == "cuda"))
 
     # ---- config snapshot ----
@@ -219,7 +226,9 @@ def main():
         "batch_size": BATCH_SIZE, "lr": LR, "epochs": EPOCHS,
         "max_steps_per_epoch": MAX_STEPS_PER_EPOCH,
         "early_stopping_patience": EARLY_STOPPING_PATIENCE,
-        "loss_alpha": LOSS_ALPHA,
+        "loss_type":    LOSS_TYPE,
+        "loss_alpha":   LOSS_ALPHA,
+        "loss_max_val": LOSS_MAX_VAL,
         "n_params": n_params,
         "device": str(device),
     }
@@ -228,7 +237,7 @@ def main():
 
     # ---- history CSV ----
     history_path = run_dir / "history.csv"
-    csv_fields   = ["epoch", "train_loss", "train_mae", "val_loss", "val_mae", "lr", "elapsed_s"]
+    csv_fields   = ["epoch", "train_loss", "train_mae", "val_loss", "val_mae", "val_ssim", "lr", "elapsed_s"]
     if not history_path.exists():
         with open(history_path, "w", newline="") as f:
             csv.DictWriter(f, fieldnames=csv_fields).writeheader()
@@ -252,7 +261,8 @@ def main():
         print(f"Resumed from epoch {start_epoch}  best_val={best_val_loss:.6f}")
 
     # ---- training loop ----
-    for epoch in range(start_epoch, EPOCHS):
+    n_epochs = int(os.environ.get("MAX_EPOCHS", EPOCHS))
+    for epoch in range(start_epoch, n_epochs):
         t0 = time.time()
 
         tr = train_epoch(model, train_loader, optimizer, criterion,
@@ -266,7 +276,7 @@ def main():
         print(
             f"Epoch {epoch+1:03d}/{EPOCHS} | "
             f"train_loss={tr['loss']:.5f}  train_mae={tr['mae']:.4f} | "
-            f"val_loss={vl['loss']:.5f}  val_mae={vl['mae']:.4f} | "
+            f"val_loss={vl['loss']:.5f}  val_mae={vl['mae']:.4f}  val_ssim={vl['ssim']:.4f} | "
             f"lr={current_lr:.2e}  t={elapsed:.0f}s"
         )
 
@@ -278,6 +288,7 @@ def main():
                 "train_mae":  round(tr["mae"],  6),
                 "val_loss":   round(vl["loss"], 6),
                 "val_mae":    round(vl["mae"],  6),
+                "val_ssim":   round(vl["ssim"], 6),
                 "lr":         current_lr,
                 "elapsed_s":  round(elapsed, 1),
             })

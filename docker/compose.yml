@@ -187,13 +187,14 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    image: weather_v2:base
+    image: weather_v2:pytorch211
     container_name: weather_train_${ARCH:-unet}_s${SEED:-42}_t${SEQ_LEN:-6}
     volumes:
       - ${DATA_DIR}:/app/data
       - ${EXPERIMENTS_DIR:-../experiments}:/app/experiments
       - ../scripts:/app/scripts:ro
       - ../src:/app/src:ro
+      - ../config:/app/config:ro
     environment:
       - PYTHONUNBUFFERED=1
       - NVIDIA_VISIBLE_DEVICES=${GPU:-1}
