@@ -3,13 +3,13 @@
 [![DOI](https://img.shields.io/badge/DOI-pending-blue)](https://doi.org/)
 [![arXiv](https://img.shields.io/badge/arXiv-pending-b31b1b)](https://arxiv.org/)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License: EUPL v1.2](https://img.shields.io/badge/License-EUPL%20v1.2-blue.svg)](LICENSE)
 
 This repository contains the official PyTorch implementation and evaluation code for the manuscript *"2D Selective State-Space Scanning for Parameter-Efficient and Reproducible Urban Temperature Downscaling"* submitted to the **Journal of Computational Science** (Elsevier).
 
 ## Overview
 
-VMamba2 replaces the 1D Mamba bottleneck in a U-Net architecture with a 2D cross-directional selective scan that preserves spatial topology. The model achieves competitive accuracy with ConvLSTM while using **3.4× fewer parameters** (1.35M vs 4.61M), and is substantially more reproducible across random seeds (MAE CV 5.6% vs 31.5% for 1D Mamba).
+VMamba2 replaces the 1D Mamba bottleneck in a U-Net architecture with a 2D cross-directional selective scan that preserves spatial topology. With **3.4× fewer parameters** than ConvLSTM (1.35M vs 4.61M), VMamba2 achieves marginally higher structural fidelity (SSIM 0.825 vs 0.822) while remaining competitive in mean absolute error. The 2D scan is substantially more reproducible than its 1D counterpart (MAE CV 5.6% vs 31.5%).
 
 - **Target:** downscaling ERA5-Land (~9 km) → UrbClim (100 m) hourly air temperature over Barcelona
 - **Training:** 2008–2015, validation 2016, **test full-year 2017** (8742 hourly samples)
@@ -125,8 +125,8 @@ Key results from the full-year 2017 test set (8742 hourly samples, best seed per
 |---|---|---|---|
 | VMamba2 (T=12, s44) | 1.35M | 0.583 | 0.843 |
 | ConvLSTM (T=6, s42) | 4.61M | 0.591 | 0.839 |
-| 1D Mamba (T=6) | 1.35M | 0.990 | 0.713 |
-| U-Net (T=6) | 1.35M | 0.700 | 0.792 |
+| 1D Mamba (T=6) | 1.20M | 0.990 | 0.713 |
+| U-Net (T=6) | 1.95M | 0.777 | 0.805 |
 
 ## Citation
 
@@ -144,4 +144,4 @@ Key results from the full-year 2017 test set (8742 hourly samples, best seed per
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+EUPL v1.2. See [LICENSE](LICENSE).
