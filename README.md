@@ -9,7 +9,7 @@ This repository contains the official PyTorch implementation and evaluation code
 
 ## Overview
 
-VMamba2 replaces the 1D Mamba bottleneck in a U-Net architecture with a 2D cross-directional selective scan that preserves spatial topology. With **3.4× fewer parameters** than ConvLSTM (1.35M vs 4.61M), VMamba2 achieves marginally higher structural fidelity (SSIM 0.825 vs 0.822) while remaining competitive in mean absolute error. The 2D scan is substantially more reproducible than its 1D counterpart (MAE CV 5.6% vs 31.5%).
+VMamba2 replaces the 1D Mamba bottleneck in a U-Net architecture with a 2D cross-directional selective scan that preserves spatial topology. With **3.4× fewer parameters** than ConvLSTM (1.35M vs 4.61M), VMamba2 matches ConvLSTM structural fidelity (SSIM 0.825 vs 0.822; neither difference significant at n=5) while remaining competitive in mean absolute error. The 2D scan substantially outperforms its 1D counterpart (+0.023 SSIM, d=1.76, p=0.02), while the 1D Mamba baseline is near-deterministic (MAE CV 0.6% vs VMamba2 5.6%).
 
 - **Target:** downscaling ERA5-Land (~9 km) → UrbClim (100 m) hourly air temperature over Barcelona
 - **Training:** 2008–2015, validation 2016, **test full-year 2017** (8742 hourly samples)
@@ -125,7 +125,7 @@ Key results from the full-year 2017 test set (8742 hourly samples, best seed per
 |---|---|---|---|
 | VMamba2 (T=12, s44) | 1.35M | 0.583 | 0.843 |
 | ConvLSTM (T=6, s42) | 4.61M | 0.591 | 0.839 |
-| 1D Mamba (T=6) | 1.20M | 0.990 | 0.713 |
+| 1D Mamba (T=6, s43) | 1.20M | 0.757 | 0.818 |
 | U-Net (T=6) | 1.95M | 0.777 | 0.805 |
 
 ## Citation
