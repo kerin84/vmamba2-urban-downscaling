@@ -1,27 +1,17 @@
 cff-version: 1.2.0
-title: "VMamba2: 2D Selective State-Space Scanning for Parameter-Efficient and Reproducible Urban Temperature Downscaling"
-message: "If you use this software, please cite the paper and the Zenodo DOI."
-type: software
+message: "If you use this software, please cite it as below."
+title: "Revisiting Spatiotemporal Downscaling with 2D State-Space Models: Preserving Spatial Topology in Urban Temperature Fields"
 authors:
-  - given-names: Kerin
-    family-names: Cardona
-    affiliation: "Centre Internacional de Mètodes Numèrics en Enginyeria (CIMNE)"
-    orcid: "https://orcid.org/0000-0002-6591-3498"
-  - given-names: Gerard
-    family-names: Mor
-    affiliation: "Centre Internacional de Mètodes Numèrics en Enginyeria (CIMNE)"
-  - given-names: Jordi
-    family-names: Cipriano
-    affiliation: "Centre Internacional de Mètodes Numèrics en Enginyeria (CIMNE)"
-  - given-names: Francesc
-    family-names: Solsona
-    affiliation: "Universitat de Lleida (UdL)"
+  - family-names: Cardona
+    given-names: Kerin
+    orcid: "https://orcid.org/0000-0000-0000-0000"
+  - family-names: Mor
+    given-names: Gerard
+  - family-names: Cipriano
+    given-names: Jordi
+  - family-names: Solsona
+    given-names: Francesc
 repository-code: "https://github.com/kerin84/vmamba2-urban-downscaling"
+url: "https://github.com/kerin84/vmamba2-urban-downscaling"
 license: EUPL-1.2
-keywords:
-  - spatiotemporal downscaling
-  - state-space model
-  - selective scan
-  - urban climate
-  - digital twin
-  - deep learning
+year: 2026

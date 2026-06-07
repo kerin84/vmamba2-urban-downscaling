@@ -1,49 +1,43 @@
 {
-    "title": "VMamba2: 2D Selective State-Space Scanning for Parameter-Efficient and Reproducible Urban Temperature Downscaling",
-    "description": "Official PyTorch implementation of VMamba2, a 2D selective state-space bottleneck for U-Net architectures applied to urban temperature downscaling. The model downscales ERA5-Land (~9 km) air temperature to UrbClim targets (100 m) over the Barcelona metropolitan area. Trained across five independent seeds (n=5) with two temporal windows (T=6 and T=12 hours) and benchmarked against ConvLSTM, U-Net, and 1D Mamba baselines. Includes full training and evaluation pipeline, figure generation scripts, and result CSVs.",
-    "creators": [
-        {
-            "name": "Cardona, Kerin",
-            "affiliation": "Centre Internacional de M\u00e8todes Num\u00e8rics en Enginyeria (CIMNE)",
-            "orcid": "0000-0002-6591-3498"
-        },
-        {
-            "name": "Mor, Gerard",
-            "affiliation": "Centre Internacional de M\u00e8todes Num\u00e8rics en Enginyeria (CIMNE)"
-        },
-        {
-            "name": "Cipriano, Jordi",
-            "affiliation": "Centre Internacional de M\u00e8todes Num\u00e8rics en Enginyeria (CIMNE)"
-        },
-        {
-            "name": "Solsona, Francesc",
-            "affiliation": "Universitat de Lleida (UdL)"
-        }
-    ],
-    "keywords": [
-        "spatiotemporal downscaling",
-        "state-space model",
-        "selective scan",
-        "VMamba2",
-        "urban climate",
-        "digital twin",
-        "deep learning",
-        "air temperature",
-        "ERA5-Land"
-    ],
-    "license": "EUPL-1.2",
-    "upload_type": "software",
-    "access_right": "open",
-    "language": "eng",
-    "communities": [
-        {
-            "identifier": "zenodo"
-        }
-    ],
-    "related_identifiers": [
-        {
-            "relation": "isSupplementTo",
-            "identifier": "https://github.com/kerin84/vmamba2-urban-downscaling"
-        }
-    ]
+  "title": "Revisiting Spatiotemporal Downscaling with 2D State-Space Models: Preserving Spatial Topology in Urban Temperature Fields",
+  "description": "Official PyTorch implementation of VMamba2 — a 2D selective state-space bottleneck for U-Net architectures that performs cross-directional scanning to preserve spatial topology in urban temperature downscaling. Submitted to Computational Urban Science, Special Collection: Revisiting Spatiotemporal Modeling in the Era of GeoAI.",
+  "creators": [
+    {
+      "name": "Cardona, Kerin",
+      "affiliation": "CIMNE — Building Energy and Environment Group",
+      "orcid": "0000-0000-0000-0000"
+    },
+    {
+      "name": "Mor, Gerard",
+      "affiliation": "CIMNE — Building Energy and Environment Group"
+    },
+    {
+      "name": "Cipriano, Jordi",
+      "affiliation": "CIMNE — Building Energy and Environment Group"
+    },
+    {
+      "name": "Solsona, Francesc",
+      "affiliation": "Universitat de Lleida (UdL)"
+    }
+  ],
+  "license": "EUPL-1.2",
+  "keywords": [
+    "state-space-model",
+    "downscaling",
+    "urban-temperature",
+    "spatiotemporal",
+    "geoai",
+    "pytorch",
+    "mamba",
+    "deep-learning",
+    "urban-climate",
+    "reproducibility"
+  ],
+  "related_identifiers": [
+    {
+      "relation": "isSupplementTo",
+      "identifier": "https://github.com/kerin84/vmamba2-urban-downscaling"
+    }
+  ],
+  "language": "eng"
 }

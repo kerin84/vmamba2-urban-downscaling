@@ -1,20 +1,38 @@
-# VMamba2 — 2D Selective State-Space Scanning for Urban Temperature Downscaling
+# VMamba2 — Revisiting Spatiotemporal Downscaling with 2D State-Space Models
 
-[![DOI](https://img.shields.io/badge/DOI-pending-blue)](https://doi.org/)
-[![arXiv](https://img.shields.io/badge/arXiv-pending-b31b1b)](https://arxiv.org/)
+[![DOI](https://img.shields.io/badge/DOI-10.5281/zenodo.XXXXXXX-blue)](https://doi.org/)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
 [![License: EUPL v1.2](https://img.shields.io/badge/License-EUPL%20v1.2-blue.svg)](LICENSE)
+[![Docker](https://img.shields.io/badge/docker-compose-blue.svg)](docker/)
 
-This repository contains the official PyTorch implementation and evaluation code for the manuscript *"2D Selective State-Space Scanning for Parameter-Efficient and Reproducible Urban Temperature Downscaling"* submitted to the **Journal of Computational Science** (Elsevier).
+This repository contains the official PyTorch implementation and evaluation code for the manuscript:
+
+> **Revisiting Spatiotemporal Downscaling with 2D State-Space Models: Preserving Spatial Topology in Urban Temperature Fields**
+
+Submitted to **Computational Urban Science** (Springer Nature), Special Collection: *Revisiting Spatiotemporal Modeling in the Era of GeoAI*.
 
 ## Overview
 
-VMamba2 replaces the 1D Mamba bottleneck in a U-Net architecture with a 2D cross-directional selective scan that preserves spatial topology. With **3.4× fewer parameters** than ConvLSTM (1.35M vs 4.61M), VMamba2 matches ConvLSTM structural fidelity (SSIM 0.825 vs 0.822; neither difference significant at n=5) while remaining competitive in mean absolute error. The 2D scan substantially outperforms its 1D counterpart (+0.023 SSIM, d=1.76, p=0.02), while the 1D Mamba baseline is near-deterministic (MAE CV 0.6% vs VMamba2 5.6%).
+Spatiotemporal GeoAI faces a fundamental tension: recurrent architectures (ConvLSTM) preserve spatial topology but impose sequential, non-parallelisable computation, while attention scales quadratically with sequence length. State-space models (SSMs) offer linear complexity, but standard 1D token flattening destroys the 2D spatial organization of geographic fields.
 
+**VMamba2** is a 2D selective state-space bottleneck for U-Net architectures that reconciles this tension via cross-directional scanning along four cardinal paths. Key findings:
+
+| Metric | VMamba2 (T=12) | ConvLSTM | 1D Mamba | U-Net |
+|--------|:---:|:---:|:---:|:---:|
+| **SSIM** (mean ± std, n=5) | 0.825 ± 0.013 | 0.822 ± 0.014 | 0.802 ± 0.014 | 0.805 ± 0.004 |
+| **MAE** (°C, mean ± std, n=5) | 0.640 ± 0.036 | 0.621 ± 0.033 | 0.765 ± 0.005 | 0.777 ± 0.031 |
+| **Parameters** | 1.35M | 4.61M | 1.20M | 1.95M |
+
+- VMamba2 matches ConvLSTM accuracy with **3.4× fewer parameters** (neither difference significant at n=5, Welch's t-test)
+- 2D scanning improves SSIM by **+0.023** over 1D Mamba (p=0.02, d=1.76)
+- 1D Mamba is near-deterministic (MAE CV 0.6%); VMamba2 CV 5.6% remains within operational bounds
+- **Best single seed** (s44, T=12): MAE 0.583 °C, SSIM 0.843
+
+**Experimental setup:**
 - **Target:** downscaling ERA5-Land (~9 km) → UrbClim (100 m) hourly air temperature over Barcelona
-- **Training:** 2008–2015, validation 2016, **test full-year 2017** (8742 hourly samples)
-- **Protocol:** 5 seeds × 100 epochs × 2 temporal windows (T=6, T=12)
-- **Baselines:** ConvLSTM, non-recurrent U-Net, 1D Mamba
+- **Training:** 2008–2015, validation 2016, test full-year 2017 (8742 hourly samples)
+- **Protocol:** 5 independent seeds (42–46) × 2 temporal windows (T=6, T=12)
+- **Hardware:** NVIDIA RTX PRO 6000 Blackwell (48 GB), PyTorch 2.7 + CUDA 12.8
 
 ## Repository structure
 
@@ -44,7 +62,7 @@ VMamba2 replaces the 1D Mamba bottleneck in a U-Net architecture with a 2D cross
 │       └── baseline_results.csv # ERA5-Land baselines
 ├── requirements.txt           # Python dependencies
 ├── docker/
-│   ├── Dockerfile             # PyTorch 2.2.0 + CUDA 12.1 container
+│   ├── Dockerfile             # PyTorch 2.7 + CUDA 12.8 container
 │   └── compose.yml            # Docker Compose for training + evaluation
 ├── data/                      # Placeholder for datasets (see below)
 │   └── urbclim_grid_coords.txt
@@ -117,31 +135,42 @@ python scripts/figures/make_figures_thor.py --stage1   # extract from thor
 python scripts/figures/make_figures_thor.py              # render PDFs (needs cartopy)
 ```
 
-## Results
+### 6. Docker
 
-Key results from the full-year 2017 test set (8742 hourly samples, best seed per architecture):
+```bash
+docker compose -f docker/compose.yml run --rm train
+docker compose -f docker/compose.yml run --rm evaluate
+```
 
-| Model | Params | MAE (°C) | SSIM |
-|---|---|---|---|
-| VMamba2 (T=12, s44) | 1.35M | 0.583 | 0.843 |
-| ConvLSTM (T=6, s42) | 4.61M | 0.591 | 0.839 |
-| 1D Mamba (T=6, s43) | 1.20M | 0.757 | 0.818 |
-| U-Net (T=6) | 1.95M | 0.777 | 0.805 |
+The Dockerfile uses `pytorch/pytorch:2.7.0-cuda12.8-cudnn9-devel`. Volume-mount your data directory when running.
+
+## Reproducibility
+
+All results in the manuscript are derived from 5 independent seeds (42–46) per architecture × sequence length combination. The evaluation scripts in `experiments/evaluation/` contain the raw per-run metrics.
+
+To reproduce the exact figures and tables from the paper:
+1. Train all configurations (5 seeds × 4 architectures × 2 sequence lengths = 22 configurations for learned models)
+2. Run `evaluate.py` on the 2017 test set
+3. Run `make_result_figures.py` to generate F4–F6 and S1–S2
+4. Run `make_figures_thor.py` on the prediction arrays to generate F3 and F7–F10
 
 ## Citation
 
 ```bibtex
 @article{cardona2026vmamba2,
-  title   = {2D Selective State-Space Scanning for Parameter-Efficient
-             and Reproducible Urban Temperature Downscaling},
+  title   = {Revisiting Spatiotemporal Downscaling with 2D State-Space
+             Models: Preserving Spatial Topology in Urban Temperature Fields},
   author  = {Cardona, Kerin and Mor, Gerard and Cipriano, Jordi
              and Solsona, Francesc},
-  journal = {Journal of Computational Science},
+  journal = {Computational Urban Science},
   year    = {2026},
-  note    = {Under review},
+  note    = {Under review. Special Collection: Revisiting Spatiotemporal
+             Modeling in the Era of GeoAI},
 }
 ```
 
 ## License
 
 EUPL v1.2. See [LICENSE](LICENSE).
+
+© 2026 Kerin Cardona and Gerard Mor
